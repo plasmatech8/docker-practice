@@ -115,7 +115,7 @@ Then we can use `docker compose up` to run the entire compose.
 
 Purpose                 | Command/s
 ------------------------|------------------------
-Build an image          | `docker build`
+Build an image          | `docker build -t <image-name> .`
 View images             | `docker image ls`. Consider `-a` to show hidden
 Rm dangling images      | `docker image prune`
 
@@ -129,6 +129,7 @@ Run a new container     | `docker run <image-name>`.
 .                       | Detached mode (`-d`)
 .                       | Remove on exit (`-r`)
 .                       | Port mapping (`-p 5000:8080`)
+.                       | Environment variables (`-e APP_COLOR=blue`)
 .                       | Use `-it` if you want to have access to the container shell (like a VM).
 Stop a container        | `docker stop <container-name>`
 View running containers | `docker ps` or `docker container ls`. Consider `-a` to show hidden/stopped.
