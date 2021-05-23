@@ -13,6 +13,7 @@ Contents:
     - [Accessing ConfigMap & Secrets](#accessing-configmap--secrets)
     - [Internal/External Services](#internalexternal-services)
     - [Namespaces](#namespaces)
+    - [Ingress](#ingress)
   - [Demos](#demos)
   - [Commands](#commands)
 
@@ -215,6 +216,48 @@ Cons:
 Services can still be accessed between namespaces! `<SERVICE>.<NAMESPACE>` => `mysql-service.database`
 
 We can use a different namespace by using the `-n` flag, or installing kubens to change the default namespace.
+
+### Ingress
+
+The Problem with Load Balancers:
+* Only 1 LB per service
+* Each LB needs the cloud-provider to create an external machine which routes to the service
+* Can get expensive if we have many different services
+
+In this case, we would not make an external service, instead an ingress which directs to the
+internal service. `ingress > internal service > pod`
+
+```yaml
+apiVersion: networking.k8s.io/v1beta1
+kind: Ingress
+metadata:
+  name: myapp-ingress
+spec:
+
+  tls: # TLS certificate!
+  - hosts:
+    - myapp.com
+    secretName: myapp-secret-tls
+
+  rules: # Routing rules
+  - host: myapp.com
+    http:
+      paths:
+      - backend: # (No path)
+        serviceName: myapp-internal-service
+        servicePort: 8080
+      - path: /analytics
+        backend:
+        serviceName: analytics-service
+        servicePort: 8080
+```
+
+We define the exact rules for subdomains/paths and the service that it directs to.
+
+We also need an ingress controller pod which evaluates the routing rules and acts as an entrypoint
+to the cluster. (There are lots of 3rd party implementations):
+`ingress controller > ingress > internal service > pod`
+
 
 ## Demos
 
