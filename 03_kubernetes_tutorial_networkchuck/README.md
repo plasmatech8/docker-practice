@@ -42,6 +42,8 @@ kubectl get nodes
 # YAY
 ```
 
+We can also set the default kubeconfig by setting `~/.kube/config` to the contents of `kubeconfig.yaml`
+
 ### Single Pod
 
 Containers run inside pods (pods are a single independent unit).
