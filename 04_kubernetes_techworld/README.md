@@ -5,9 +5,19 @@ See:
 
 Contents:
 - [Kubernetes Course](#kubernetes-course)
-  - [Main K8 Components](#main-k8-components)
+  - [Notes](#notes)
+    - [Main K8 Components](#main-k8-components)
+    - [K8 Architecture](#k8-architecture)
+    - [Basic usage](#basic-usage)
+    - [K8 YAML configuration file spec](#k8-yaml-configuration-file-spec)
+    - [Accessing ConfigMap & Secrets](#accessing-configmap--secrets)
+    - [Internal/External Services](#internalexternal-services)
+  - [Demos](#demos)
+  - [Commands](#commands)
 
-## Main K8 Components
+## Notes
+
+### Main K8 Components
 
 Node:
 * A machine running Kubernetes
@@ -49,4 +59,133 @@ StatefulSet:
 * StatefulSet is used to ensure that database reads/writes are sycronised, so there are no inconsistencies between the pods.
 * (Note: You cannot deploy multiple databases)
 * (Note: StatefulSet can be tedious, so it is very common to host the entire database externally)
+
+### K8 Architecture
+
+3 processes must be installed on each node:
+* Kubelet
+  * Interacts with container and node
+  * Starts the pod with a container inside
+* Container runtime
+  * Used to run the containers
+* Kube proxy
+  * Used for forwardng requests between services and pods
+  * Can intelligently route to pods within the same node
+
+4 processes run on master nodes:
+* API server (cluster gateway + auth)
+* Scheduler (interacts with kubelets on nodes)
+* Controller manager (detects state changes and informs scheduler)
+* etcd (cluster brain, key-value store information, updated based on cluster state)
+
+### Basic usage
+
+Create an Nginx deployment (not using a yaml file):
+`kubectl create deployment nginx-depl --image=nginx`
+
+Edit the deployment (by default it has just 1 replica and an app:name lavel):
+`kubectl edit deployments.apps nginx-depl`
+
+View the logs of the pod:
+`kubectl logs nginx-depl-5c8bf76b5b-cjhzc`
+
+Open an interactive terminal in a pod/container (very similar to docker!):
+`kubectl exec -it nginx-depl-5c8bf76b5b-wflwj -- bin/bash`
+
+Create or update a deployment (using a yaml file):
+`kubectl apply -f nginx-deployment.yaml`
+
+We can also delete a deployment using the configuration file instead of deployment name.
+
+### K8 YAML configuration file spec
+
+Metadata
+* Different for each type/kind of deployment
+  * deployments: replicas, selector, template
+  * services: selector, port
+
+Status
+* Automatically injected by Kubernetes
+
+Note that all status information is stored in etcd.
+
+Deployment:
+* spec > template:
+  * The blueprint for the pod for a deployment
+* metadata > labels > key:value
+  * The labels for the deployment
+* spec > template > metadata > labels > key:value
+  * The labels for the pods (? same as deployment label ?)
+
+Service:
+* spec > selector > matchLabels:
+  * Needs to point to either the pod template label or the deployment label
+* spec > ports > -protocol:TCP,port:80,targetPort:8080
+  * Target port is the port on the worker pods
+  * Port is the port on the service
+
+After deploying a YAML file, we can view the **FULL** status/config, pulled directly from etcd:
+```bash
+# Get config (with status info added) and pipe to a yaml file
+kubectl get deployments.apps nginx-depl -o yaml > nginx-deployment-result.yaml
+```
+
+### Accessing ConfigMap & Secrets
+
+```yaml
+env:
+
+# SECRET
+- name: ME_CONFIG_MONGODB_ADMINPASSWORD # local environment variable
+  valueFrom:
+    secretKeyRef:
+      name: mongodb-secret              # Secret name
+      key: mongo-root-password          # item name
+
+# CONFIGMAP
+- name: ME_CONFIG_MONGODB_SERVER        # local environment variable
+  valueFrom:
+    configMapKeyRef:
+      name: mongodb-configmap           # ConfigMap name
+      key: database_url                 # item name
+```
+
+Secrets:
+* Use `echo -n 'username' | base64` to base64 encode your secrets before putting them in your YAML
+
+DO NOT COMMIT SECRETS.YML TO GITHUB
+* Consider using "Sealed Secrets for Kubernetes" to make it safe to store publicly.
+* Or don't store them at all.
+
+### Internal/External Services
+
+Change an internal service (ClusterIP) to an external service (LoadBalancer) by changing:
+* `spec: type: LoadBalancer`
+* And possibly also: `spec: ports: nodePort: 30000`
+
+In an external service, the packet should be forwarded to:
+1. nodePort (port exposed to external traffic)
+2. port (port accessible internally to the cluster)
+3. targetPort (port running the Mongo Express web application) - not sure why this isn't happening - maybe it is due to Linode?
+
+
+## Demos
+
+[Demo: MongoDB & MongoExpress](mongo/README.md)
+* **Deployment** for MongoDB
+* **Secret** for username, password
+* **Internal Service** for accessing the database
+* **ConfigMap** to obtain central configuration (the DNS name of the database service)
+* **Deployment** for MongoExpress
+* **External Service** to expose the Mongo Express server publicly
+
+## Commands
+
+Purpose                             | Command/s
+------------------------------------|------------------------
+List all kubernetes objects         | `kubectl get all`
+View pod logs                       | `kubectl logs <POD>`
+Open interactive terminal in pod    | `kubectl exec -it <POD> -- bin/bash`
+Get full deployment config/status   | `kubectl get deployments.apps nginx-depl -o yaml`
+Test connectivity                   | `nc -vz <URL> <PORT>` or `ping <URL>:<PORT>` (shows DNS lookup result)
 
