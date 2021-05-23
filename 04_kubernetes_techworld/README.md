@@ -14,6 +14,7 @@ Contents:
     - [Internal/External Services](#internalexternal-services)
     - [Namespaces](#namespaces)
     - [Ingress](#ingress)
+    - [Helm package manager](#helm-package-manager)
   - [Demos](#demos)
   - [Commands](#commands)
 
@@ -257,6 +258,26 @@ We define the exact rules for subdomains/paths and the service that it directs t
 We also need an ingress controller pod which evaluates the routing rules and acts as an entrypoint
 to the cluster. (There are lots of 3rd party implementations):
 `ingress controller > ingress > internal service > pod`
+
+### Helm package manager
+
+A way to package YAML files and distribute them in public/private repositories.
+
+Helm chart = Bundle of YAML files.
+* template YAML config
+* values.yaml - used for config variables of the template
+
+```bash
+helm search <keyword>
+helm install --values=my-override-values.yaml <chartname>
+```
+
+Structure:
+* `mychart/` name of chart
+  * `Chart.yaml` meta info
+  * `values.yaml` values for template
+  * `charts/` chart dependencies
+  * `templates/` template files
 
 
 ## Demos

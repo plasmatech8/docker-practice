@@ -173,7 +173,7 @@ To make an external service we add:
 > Internal service is default
 
 Now we can go to the external IP address of the service in our browser!!!
-* Make sure you use `http:<EXTERNAL-IP>:8081`
+* Make sure you use `http:<EXTERNAL-IP>:<PORT>`
 
 > In a service, the packet should be forwarded to:
 > 1. nodePort (port exposed to external traffic)
