@@ -12,6 +12,7 @@ Contents:
     - [K8 YAML configuration file spec](#k8-yaml-configuration-file-spec)
     - [Accessing ConfigMap & Secrets](#accessing-configmap--secrets)
     - [Internal/External Services](#internalexternal-services)
+    - [Namespaces](#namespaces)
   - [Demos](#demos)
   - [Commands](#commands)
 
@@ -168,6 +169,52 @@ In an external service, the packet should be forwarded to:
 2. port (port accessible internally to the cluster)
 3. targetPort (port running the Mongo Express web application) - not sure why this isn't happening - maybe it is due to Linode?
 
+### Namespaces
+
+A way to organise/seperate your resources. Like a cluster inside of your cluster.
+```
+kubectl get namespaces
+```
+
+4 default namespaces:
+* kube-system
+  * Not meant for user access
+  * System & master processes etc
+* kube-public
+  * Publicly accessible data even without authentication
+  * `kubectl cluster-info`
+* kube-node-lease
+  * Node heartbeat, each node has an associated lease object
+  * Determines availability of a node
+* Default
+  * Where our resources are created
+
+We can create namespaces using a configuration file. e.g.
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mysql-configmap
+  namespace: my-namespace
+data:
+  db_url: mysql-service.database
+```
+
+When should use one?
+* When our default namespace gets fill and it gets hard to manage/filter through the resources.
+  * We can have a namespace for database, monitoring, logging, elastic stack, nginx, etc
+* Large projects
+* Large/numerous teams
+* Staging/development environments
+* Blue/green deployment
+
+Cons:
+* Limited access
+* ConfigMaps and secrets need to be replicated over multiple namespaces
+
+Services can still be accessed between namespaces! `<SERVICE>.<NAMESPACE>` => `mysql-service.database`
+
+We can use a different namespace by using the `-n` flag, or installing kubens to change the default namespace.
 
 ## Demos
 
