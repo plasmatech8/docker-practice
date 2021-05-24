@@ -16,6 +16,8 @@ Contents:
     - [Ingress](#ingress)
     - [Helm package manager](#helm-package-manager)
     - [Volumes](#volumes)
+    - [StatefulSet](#statefulset)
+    - [Services](#services)
   - [Demos](#demos)
   - [Commands](#commands)
 
@@ -221,6 +223,8 @@ We can use a different namespace by using the `-n` flag, or installing kubens to
 
 ### Ingress
 
+** Course is weird
+
 The Problem with Load Balancers:
 * Only 1 LB per service
 * Each LB needs the cloud-provider to create an external machine which routes to the service
@@ -256,9 +260,17 @@ spec:
 
 We define the exact rules for subdomains/paths and the service that it directs to.
 
-We also need an ingress controller pod which evaluates the routing rules and acts as an entrypoint
-to the cluster. (There are lots of 3rd party implementations):
-`ingress controller > ingress > internal service > pod`
+Ingress Controller pods:
+* We also need an ingress controller pod which evaluates the routing rules and acts as an entrypoint to the cluster
+* There are lots of 3rd party images which can be used for this pod (e.g. K8s NginX Ingress Controller)
+* Once we install an ingress controller, we are ready to create our Ingress
+
+***
+
+Ingress will allow us to:
+* Have just one external load balancer
+* Which forwards to the ingress controller pod (which determines routing rules)
+* Which is then forwarded to our internal service
 
 ### Helm package manager
 
@@ -384,6 +396,60 @@ spec:
       storage: 100Gi
   storageClassName: storage-class-name
 ```
+
+### StatefulSet
+
+* Each pod in a statefulset has an identifier. When a pod stops, a new pod with the exact same identifier is created to replace it.
+* There is also a mechanism that decides which pod to act as the write-database, while the rest are read-replicas.
+* The master database needs to syncronise with worker databases.
+* When a new database pod is created, it clones from the *previous* database pod.
+* It is a best practice to use data persistence for every database pod, even worker pods.
+* The identifier ensures that the persistent storage for the pod gets reattached to the same pod.
+* Each pod is also given a DNS name, prepended by a service name defined in the StatefulSet.
+
+e.g.
+* mysql-0, master, pv-0, mysql-0.servicename
+* mysql-1, worker, pv-1, mysql-1.servicename
+* mysql-2, worker, pv-2, mysql-2.servicename
+
+Databases in Kubernetes is tricky because you need to configure remote storage, data
+syncronisation and backups manually. Containers are great for stateless applications, not stateful.
+
+### Services
+
+* Services allow us to have a persistent IP address to access a pod/s.
+* Provides load balancing
+
+ClusterIP (default Service)
+* Internal service
+* Accessible by `IP:PORT`
+* Uses `selectors: <LABELS>` to specify pods
+* Uses `targetPort: <PORT>` to specify the port in the pod to send to
+* We can also create a multi-port service which forwards port-to-port
+  * `ports: - name: ... -name: ...`
+  * i.e. If we have 2 containers in one pod, and we want to forward one port to one container
+
+Headless
+* Used when we want to communicate with a single specific pod (not random)
+* Useful for stateful applications / databases
+  * If we need to databases communicate to the master for data syncronisation
+  * If we need to communicate with the master database for writing data
+
+NodePort
+* Creates a static port, on each worker node of the cluster
+* Allows us to make browser requests directly to the worker node
+* Allows ports 30000 - 32767
+* Not considered efficient or secure
+* Normally only used for testing
+
+LoadBalancer
+* Creates an external load balancer, managed by your cloud provider
+* Forwards traffic to a ClusterIP internal service
+
+For external traffic, you would normally either use:
+* Ingress, which forwards to internal services
+* LoadBalancer, which forwards an internal services
+
 
 ## Demos
 
