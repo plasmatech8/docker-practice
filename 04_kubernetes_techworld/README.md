@@ -15,6 +15,7 @@ Contents:
     - [Namespaces](#namespaces)
     - [Ingress](#ingress)
     - [Helm package manager](#helm-package-manager)
+    - [Volumes](#volumes)
   - [Demos](#demos)
   - [Commands](#commands)
 
@@ -279,6 +280,110 @@ Structure:
   * `charts/` chart dependencies
   * `templates/` template files
 
+### Volumes
+
+You need external storage to ensure data security.
+
+PersistentVolume
+* Used to declare storage resource in the cluster
+* Can be mapped to storage such as AzureDisk, NFS, iSCSI, etc
+* Cluster-wide resource
+* We can specify the storage backend (in cluster or in cloud storage)
+
+```yaml
+apiversion: v1
+kind: PersistentVolume
+metadata:
+  name: pv-name
+spec:
+  capacity:
+    storage: 5Gi
+  volumeMode: Filesystem
+  assessModes:
+  - ReadWriteOnce
+  storageClassName: slow
+  mountOptions:
+  - hard
+  - nfsvers=4.0
+  nfs:
+    path: /dir/path/on/nfs/server
+    server: nfs-server-ip-address
+```
+
+PersistentVolumeClaim
+* Used to give (claim) part of a persistent volume to a pod
+* Creates a mounted volumes for each pod with specified size
+* Namespace-bound resource
+* Attempts to find a PV which can satisfy the claim (any PV)
+
+```yaml
+apiversion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pvc-name
+spec:
+  storageClassName: manual
+  volumeMode: Filesystem
+  assessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+```
+
+Pod that mounts a volume to the pod, then mounts it to the container:
+```yaml
+apiversion: v1
+kind: Pod
+metadata:
+  name: mypod
+spec:
+  containers:
+  - name: myfrontend
+    image: nginx
+    volumeMounts:
+    - name: mypd  # volume name
+      mountPath: "/var/www/html"
+  volumes:
+  - name: mypd # volume name
+    persistentVolumeClaim:
+      claimName: pvc-name
+```
+
+Note: there is a 1-1 mapping from PVC to PV, so a 1GB PVC will need to use up an entire 1TB PV. (To confirm)
+
+StorageClass
+* Used for dynamic volume creation + allocation in the background
+* Provisions PVs dynamically as a PVC claims it (using a provisioner)
+* Internal provision has 'kubernetes.io/*'
+* -- Probably superior version of a PV (?)
+
+```yaml
+apiversion: v1
+kind: StorageClass
+metadata:
+  name: storage-class-name
+provisioner: kubernetes.io/aws-ebs
+parameters:
+  type: io1
+  iopsPerGB: "10"
+  fsType: ext4
+```
+
+Then we can claim storage using a PVC:
+```yaml
+apiversion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pvc-name
+spec:
+  assessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 100Gi
+  storageClassName: storage-class-name
+```
 
 ## Demos
 
@@ -300,3 +405,9 @@ Open interactive terminal in pod    | `kubectl exec -it <POD> -- bin/bash`
 Get full deployment config/status   | `kubectl get deployments.apps nginx-depl -o yaml`
 Test connectivity                   | `nc -vz <URL> <PORT>` or `ping <URL>:<PORT>` (shows DNS lookup result)
 
+
+
+TODO:
+* Volumes practice
+* Ingress practice
+* Finish course
