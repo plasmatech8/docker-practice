@@ -272,6 +272,9 @@ Ingress will allow us to:
 * Which forwards to the ingress controller pod (which determines routing rules)
 * Which is then forwarded to our internal service
 
+Some cloud providers provide configurability of load balancers, but ingress is most powerful
+for routing.
+
 ### Helm package manager
 
 A way to package YAML files and distribute them in public/private repositories.
